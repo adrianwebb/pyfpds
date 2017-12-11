@@ -3,6 +3,7 @@ from __future__ import print_function #needs to be at the top
 
 from collections import OrderedDict
 from datetime import datetime
+from time import sleep
 
 import xmltodict
 import requests
@@ -182,6 +183,9 @@ class Contracts():
         params = self.combine_params(self.convert_params(kwargs))
         
         while num_records == "all" or i < num_records:
+            if 'sleep' in kwargs and int(kwargs['sleep']) > 0:
+                sleep(int(kwargs['sleep']))
+            
             processed_data = self.get_api_results(params, i)
              
             if processed_data is not None:
