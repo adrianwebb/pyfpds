@@ -179,12 +179,18 @@ class Contracts():
         else:
             first_date = None
             last_date = None
+            
+        sleep_secs = int(kwargs['sleep']) if 'sleep' in kwargs and int(kwargs['sleep']) > 0 else 0
+        try:
+            del kwargs['sleep']
+        except KeyError:
+            pass
         
         params = self.combine_params(self.convert_params(kwargs))
         
         while num_records == "all" or i < num_records:
-            if 'sleep' in kwargs and int(kwargs['sleep']) > 0:
-                sleep(int(kwargs['sleep']))
+            if sleep_secs > 0: 
+                sleep(sleep_secs)
             
             processed_data = self.get_api_results(params, i)
              
