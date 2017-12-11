@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-
-__author__ = 'Kaitlin Devine'
-__email__ = 'katycorp@gmail.com'
-__version__ = '0.1.0'
+from __future__ import print_function #needs to be at the top
 
 from collections import OrderedDict
 import xmltodict
 import requests
 import json
 import warnings
+
+__author__ = 'Kaitlin Devine'
+__email__ = 'katycorp@gmail.com'
+__version__ = '0.1.0'
 
 warnings.filterwarnings('ignore')
 
