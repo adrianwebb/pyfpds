@@ -18,8 +18,7 @@ __version__ = '0.1.0'
 warnings.filterwarnings('ignore')
 
 
-field_map = {
-    
+field_map = {    
     'piid': 'PIID',
     'idv_piid': 'REF_IDV_PIID',
     'idv_agency_id': 'REF_IDV_AGENCY_ID',
@@ -80,7 +79,6 @@ field_map = {
     'vendor_state_code': 'VENDOR_ADDRESS_STATE_CODE',
     'vendor_state_name': 'VENDOR_ADDRESS_STATE_NAME',
     'vendor_zip': 'VENDOR_ADDRESS_ZIP_CODE',
-
 }
 
 
@@ -93,9 +91,8 @@ boolean_map = {
 class Contracts():
     
     feed_url = "https://www.fpds.gov/ezsearch/FEEDS/ATOM?FEEDNAME=PUBLIC&q="
-    feed_size = 10
-    query_url = ''
-   
+    
+        
     def __init__(self, logger=None):
         #point logger to a log function, print by default
         if logger:
@@ -107,13 +104,12 @@ class Contracts():
     def pretty_print(self, data):
         self.log(json.dumps(data, indent=4))
 
-        
+    
     def date_format(self, date1, date2):
         return "[{0},{1}]".format(date1.strftime("%Y/%m/%d"), date2.strftime("%Y/%m/%d"))
 
 
     def convert_params(self, params):
-
         new_params = {}
         for k,v in params.items():
             new_params[field_map[k]] = v
@@ -150,13 +146,28 @@ class Contracts():
         
         except Exception as e:
             return None
+    
+    
+    def get_api_results(self, params, start_index=1):
+        self.log("querying {0}{1}&start={2}".format(self.feed_url, params, start_index))        
+        
+        resp = requests.get(self.feed_url + params + '&start={0}'.format(start_index), timeout=60, verify = False)
+        resp_data = xmltodict.parse(resp.text, process_namespaces=True, namespaces={'http://www.fpdsng.com/FPDS': None, 'http://www.w3.org/2005/Atom': None})        
+        
+        self.log("finished querying {0}".format(resp.url))
+        try:
+            processed_data = self.process_data(resp_data['feed']['entry'])
+
+        except KeyError as e:
+            return None
+        
+        return processed_data
 
 
     def get(self, num_records=100, order='desc', **kwargs):
-
         data = []
-        i = 0        
-                
+        i = 0
+        
         #For some reason FPDS-NG is returning last modified records outside of requested range
         #which can blow up the system (memory usage issues), so check for proper modified timestamp
         #or none in the FPDS data before adding to final product.  This should free up some space.
@@ -170,16 +181,10 @@ class Contracts():
         
         params = self.combine_params(self.convert_params(kwargs))
         
-        while num_records == "all" or i < num_records:           
-            self.log("querying {0}{1}&start={2}".format(self.feed_url, params, i))
-            resp = requests.get(self.feed_url + params + '&start={0}'.format(i), timeout=60)
-            
-            self.query_url = resp.url
-            self.log("finished querying {0}".format(resp.url))
-            
-            resp_data = xmltodict.parse(resp.text, process_namespaces=True, namespaces={'http://www.fpdsng.com/FPDS': None, 'http://www.w3.org/2005/Atom': None})
-            try:
-                processed_data = self.process_data(resp_data['feed']['entry'])
+        while num_records == "all" or i < num_records:
+            processed_data = self.get_api_results(params, i)
+             
+            if processed_data is not None:
                 for pd in processed_data:
                     i += 1
                     
@@ -200,12 +205,12 @@ class Contracts():
                     data.append(pd)
                 
                 #if data contains less than 10 records, break out of loop
-                if  len(processed_data) < 10:
+                if len(processed_data) < 10:
                     break
             
-            except KeyError as e:
+            else:
                 #no results
                 self.log("No results for query")
                 break
-
+        
         return data
