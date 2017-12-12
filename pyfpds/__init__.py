@@ -128,7 +128,20 @@ class Contracts():
             data = [data,]
         return data
 
-    
+
+    def get_setting(self, kwargs, key, default=None):
+        key = "_{}".format(key) #ensure settings start with an underscore
+        
+        try:
+            value = kwargs[key]
+            del kwargs[key] #remove setting from original keyword arguments
+        
+        except KeyError:
+            value = default
+        
+        return value
+
+
     def get_last_modified_date(self, entry):
         try:
             if 'IDV' in entry:
@@ -165,9 +178,18 @@ class Contracts():
         return processed_data
 
 
-    def get(self, num_records=100, order='desc', **kwargs):
+    def get(self, num_records=100, **kwargs):
         data = []
-        i = 0
+        
+        #TODO: do something with order
+        #for now remove slently if specified
+        if 'order' in kwargs:
+            del kwargs['order']
+            
+        sleep_secs = int(self.get_setting(kwargs, 'sleep', 0))
+        data_count = int(self.get_setting(kwargs, 'count', 0))
+        index = int(self.get_setting(kwargs, 'index', 0))
+        return_page = self.get_setting(kwargs, 'return_page', False)
         
         #For some reason FPDS-NG is returning last modified records outside of requested range
         #which can blow up the system (memory usage issues), so check for proper modified timestamp
@@ -179,24 +201,18 @@ class Contracts():
         else:
             first_date = None
             last_date = None
-            
-        sleep_secs = int(kwargs['sleep']) if 'sleep' in kwargs and int(kwargs['sleep']) > 0 else 0
-        try:
-            del kwargs['sleep']
-        except KeyError:
-            pass
         
         params = self.combine_params(self.convert_params(kwargs))
         
-        while num_records == "all" or i < num_records:
+        while num_records == "all" or index < num_records:
             if sleep_secs > 0: 
                 sleep(sleep_secs)
             
-            processed_data = self.get_api_results(params, i)
+            processed_data = self.get_api_results(params, index)
              
             if processed_data is not None:
                 for pd in processed_data:
-                    i += 1
+                    index += 1
                     
                     pd['modified'] = self.get_last_modified_date(pd['content'])
                      
@@ -216,11 +232,30 @@ class Contracts():
                 
                 #if data contains less than 10 records, break out of loop
                 if len(processed_data) < 10:
+                    index = 0 #use index as a check if we have reached the last page
                     break
-            
+                
+                #if we specify a maximum data count and we have reached it, exit with what we have
+                if data_count > 0 and len(data) >= data_count:
+                    break           
             else:
                 #no results
                 self.log("No results for query")
-                break
+                break       
+        
+        #need to contextually return a list based on if we are retrieving a page
+        if return_page:
+            return data, index
         
         return data
+
+
+    def get_page(self, index=0, count=0, **kwargs):
+        kwargs['_index'] = index
+        kwargs['_count'] = count
+        kwargs['_return_page'] = True
+        
+        data, index = self.get('all', **kwargs)
+        return data, index
+        
+        
