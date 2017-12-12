@@ -231,7 +231,7 @@ class Contracts():
                     data.append(pd)
                 
                 #if data contains less than 10 records, break out of loop
-                if len(processed_data) < 10:
+                if len(processed_data) <= 10:
                     index = 0 #use index as a check if we have reached the last page
                     break
                 
