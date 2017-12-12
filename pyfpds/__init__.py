@@ -231,7 +231,7 @@ class Contracts():
                     data.append(pd)
                 
                 #if data contains less than 10 records, break out of loop
-                if len(processed_data) <= 10:
+                if len(processed_data) < 10:
                     index = 0 #use index as a check if we have reached the last page
                     break
                 
@@ -241,6 +241,7 @@ class Contracts():
             else:
                 #no results
                 self.log("No results for query")
+                index = 0
                 break       
         
         #need to contextually return a list based on if we are retrieving a page
